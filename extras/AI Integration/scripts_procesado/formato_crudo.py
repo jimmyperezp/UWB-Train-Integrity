@@ -29,7 +29,7 @@ Convenio para lo que no se ha recibido: celda vacía y seen = 0.
 
 Pares a dos saltos:
   - placas: c_w2 es la medida del coordinador con w2; w1_w3 y w2_w4, las de cada nodo con su nieto.
-  - simulador: c_w2 es la distancia del coordinador a w2; w1_w3 y w2_w4 salen por resta.
+  - simulador: igual que en las placas, medidas directas (cada vehículo mide a su hijo y a su nieto).
 """
 
 VEHICULOS = ['c', 'w1', 'w2', 'w3', 'w4']          # c = coordinador (locomotora); w = wagon (vagón)

@@ -18,9 +18,7 @@ Requisitos: Python 3.9 o superior con `pandas`, `numpy` y, para grabar, `pyseria
 ```
 AI Integration/
 ├── readme.md
-├── guia_uso.md
-├── guia_simulador.md
-├── registro_cambios.md
+├── guia_exportacion.md
 │
 ├── scripts_procesado/
 │   ├── formato_crudo.py            definición del CSV en crudo (común a simulador y placas)
@@ -31,7 +29,7 @@ AI Integration/
 │
 ├── datasets_simulador/             ensayos completos tal como los da el simulador (NO se suben a Git)
 │   ├── readme.md
-│   ├── decoupling_w2_150s/         config.json, coord/rx_coord.csv, coord/imu_crd.csv...
+│   ├── decoupling_w2_150s/         config.json, coord/rx_crd.csv, coord/uwb_crd.csv, coord/imu_crd.csv...
 │   └── ...
 │
 └── datasets_procesados/            todo lo que generan los scripts (NO se sube a Git: solo en local)
@@ -94,7 +92,7 @@ placas ─────grabador_serie───────►┘
 | `crudo/marcas_<ensayo>.csv` | grabador (placas) | Una fila por marca de fase: `from_cycle`, `coordinator_time_ms`, `phase`, `pc_time` |
 | `crudo/monitor_<ensayo>.txt` | grabador (placas) | Todo el monitor serie del coordinador, con la hora del PC en cada línea |
 | `crudo/composicion_<ensayo>.json` | adaptador (simulador) | Qué dispositivo ocupa cada posición y cómo se generó el crudo |
-| `revision/revision_<ensayo>.csv` | exportador | **Todos** los ciclos con las 25 columnas del modelo, más `use` y `label`. Sirve para revisar el cálculo y el etiquetado, y para hacer figuras. No se sube a Edge Impulse |
+| `revision/revision_<ensayo>.csv` | exportador | **Todos** los ciclos con las 25 columnas del modelo, más `use` y `label` (y, en el simulador, `unresponsive_nodes`: los vagones en un episodio de `node_unresponsive`, que no cambia la etiqueta). Sirve para revisar el cálculo y el etiquetado, y para hacer figuras. No se sube a Edge Impulse |
 | `edge_impulse/<ETIQUETA>.<ensayo>.csv` | exportador | **Los CSV de entrenamiento**: solo los ciclos de entrenamiento, un archivo por etiqueta |
 | `resumen_<ensayo>.json` | grabador + exportador | El archivo del ensayo que se abre a mano (ver abajo) |
 
@@ -205,7 +203,7 @@ y cuatro vagones (`w1`…`w4`, de *wagon*). Definido en `formato_crudo.py`.
 - **Pares a dos saltos:**
   - en las placas, `c_w2` es la medida del coordinador con w2, y `w1_w3` y `w2_w4` son las medidas de cada
     nodo con su nieto que llegan en el informe de modo modelo;
-  - en el simulador, `c_w2` es la distancia del coordinador a w2, y `w1_w3` y `w2_w4` salen por resta
+  - en el simulador, igual: cada vehículo mide a su hijo y a su nieto, y el coordinador a w1 y a w2
     (ver el adaptador, más abajo).
 - La IMU solo lleva `acc_x` y `acc_y`, que son los ejes que viajan en el informe. Mientras las placas
   no tengan IMU, valen 0.
@@ -235,7 +233,7 @@ En este orden (`calculo_columnas.py`, y la misma versión en C en `model_feature
   ejemplo, que «V2–V3 no se ve, pero V1–V3 sí y en su sitio» significa tren íntegro (redundancia del nieto).
   Para aprenderlo necesita ejemplos de enlaces perdidos con el tren íntegro (nodos apagados, fallos de radio).
 - **No entran al modelo**, pero se graban en el crudo por si entran en el futuro: la duración del ciclo
-  y `acc_y`. El porqué de esta selección está en `registro_cambios.md` (apartados 2 y 6).
+  y `acc_y`. El porqué de esta selección está en `REGISTRO_TFM.md`, en la raíz del repositorio.
 
 ### Calibración (distancia de referencia)
 
@@ -291,11 +289,20 @@ Cada ciclo recibe un **uso** y una **etiqueta**, que se ven en el archivo de rev
 - **Tiempo cero.** El inicio de la simulación, que es la referencia de los instantes de fallo del simulador.
 - **`time_ms`** es el instante del último mensaje recibido en el ciclo. **`cycle_duration_ms`** va desde el inicio
   de la vuelta hasta el final de la última ranura con respuesta.
-- **Enlace c–w1.** Distancia medida por el coordinador a w1.
-- **Enlaces entre vagones.** El simulador solo da distancias al coordinador, así que la separación se obtiene por
-  resta: d(wk) − d(wk−1). Solo cuenta como visto si se recibieron los dos vagones.
-- **Pares a dos saltos.** `c_w2` es la distancia del coordinador a w2. `w1_w3` y `w2_w4` salen por resta, igual que
-  los enlaces: d(w3) − d(w1) y d(w4) − d(w2), y solo cuentan como vistos si se recibieron los dos vagones.
+- **Distancias: medidas directas, como en las placas.** Cada vagón mide a su hijo (`uwb_son`) y a su nieto
+  (`uwb_grandson`), y las envía en su mensaje (`coord/rx_crd.csv`). El coordinador mide a w1 y a w2, y sus medidas
+  están en su archivo local `coord/uwb_crd.csv`, porque no viajan en ningún mensaje.
+  - `link_wk_w(k+1)` y `hop2_wk_w(k+2)`: `uwb_son` y `uwb_grandson` del mensaje de wk en el ciclo.
+  - `link_c_w1` y `hop2_c_w2`: `uwb_son` y `uwb_grandson` de la fila de `uwb_crd.csv` más cercana (por `frame`) al
+    mensaje de w1, o a su ranura si no llegó. Si la fila más cercana está a más de media ranura, no se usa.
+  - Una pareja cuenta como vista si llegó el mensaje (o hay fila del coordinador) y la medida no está vacía.
+- **Nodos sin responder (`node_unresponsive`).** Durante un episodio, el vagón no envía su mensaje ni mide, y quedan
+  vacías las medidas que le hacen su padre y su abuelo. Con w2 sin responder, por ejemplo, se ven `c_w1`, `w1_w3` y
+  `w3_w4`, y no se ven `w1_w2`, `w2_w3`, `c_w2` ni `w2_w4`. Los episodios se leen de `config.json`
+  (`"test"` → `"node_unresponsive"`) y se marcan en la columna `unresponsive_nodes` del archivo de revisión, según el
+  instante de la ranura de cada vagón. Si un ciclo marcado tiene el mensaje del vagón, el adaptador avisa.
+- **Formato.** Solo se acepta el formato con medidas al hijo y al nieto (`rx_crd.csv`, `uwb_crd.csv`). Un ensayo con el
+  formato antiguo (`rx_coord.csv`, distancias a la locomotora) se rechaza con un aviso: hay que repetirlo.
 - **IMU.** La de cada vagón viene en su mensaje. La del coordinador es la muestra de su propia IMU en el instante
   en que recibe a w1. Solo se pasan `acc_x` y `acc_y`.
 - **Último ciclo.** Se descarta si el registro termina a mitad de él.
@@ -318,6 +325,9 @@ Cada ciclo recibe un **uso** y una **etiqueta**, que se ven en el archivo de rev
 
 ## Ensayos del simulador y decisiones de etiquetado
 
+> Estos ensayos son del formato antiguo del simulador (distancias por resta) y hay que repetirlos. Las decisiones
+> de etiquetado se mantienen; los números de ciclos se actualizarán con los ensayos nuevos.
+
 | Ensayo | Evento | OK | LOST_INTEGRITY | Notas |
 |---|---|---|---|---|
 | desacople | Desacople V2–V3 a 150 s | ciclos 3–149 (147) | ciclos 150–454 (305) | Recortado desde 455 s: V3 y V4 vuelven a recibirse en los últimos segundos, un efecto del simulador sin sentido físico |
@@ -329,11 +339,8 @@ Cada ciclo recibe un **uso** y una **etiqueta**, que se ven en el archivo de rev
 - **IMU.** En las placas viaja a ceros hasta que haya sensores, así que el modelo no recibe la información de
   aceleración con la que se entrenó. Los resultados en las placas sirven también para justificar la necesidad de
   añadir IMU a los dispositivos.
-- **Distancias entre vecinos.** En el simulador salen por resta, así que el ruido de los enlaces es mayor que el de
-  una medida directa.
-- **Pares a dos saltos.** En el simulador salen de las mismas distancias al coordinador que los enlaces, así que no
-  aportan información independiente: el par V1–V3 se pierde a la vez que V2–V3. En las placas son medidas de radio
-  independientes, que es justo lo que aporta la redundancia. Para entrenarla hacen falta ensayos con nodos apagados
-  y fallos de radio con el tren íntegro (del gemelo digital o de las placas).
+- **Distancias.** En los dos casos son medidas directas de cada pareja, con su propio ruido. Los episodios de
+  `node_unresponsive` del simulador, etiquetados como OK, dan al modelo los ejemplos de enlaces perdidos con el tren
+  íntegro que necesita para aprender la redundancia del nieto.
 - **Duración del ciclo.** En el simulador la vuelta dura 1000 ms fijos (500 ms cuando faltan V3 y V4); en las placas,
   unos 1400 ms, y más cuando hay fallos. Ya no es una entrada del modelo, pero se sigue grabando.

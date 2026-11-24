@@ -87,7 +87,8 @@ El ensayo 'desconexion_v3_01' ya existe (grabado el 2026-11-10 10:32, 412 ciclos
 
 ## 4. Añadir y exportar un ensayo del simulador
 
-Cómo generar el ensayo con el simulador está en `guia_simulador.md`.
+Cómo generar el ensayo está en la guía del repositorio del simulador (`Simulador-CARLA`, `docs/guia_simulador.md`).
+Solo se aceptan ensayos del formato actual del simulador (`coord/rx_crd.csv` y `coord/uwb_crd.csv`).
 
 1. Copia la carpeta del ensayo, tal como la da el simulador, dentro de `datasets_simulador/`.
 2. Añade su entrada en `datasets_procesados/simulador/ensayos_simulador.json` (a mano, dentro de `"ensayos"`):

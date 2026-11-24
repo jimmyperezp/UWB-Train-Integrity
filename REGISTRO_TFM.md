@@ -28,7 +28,7 @@ Rama: `...` · Commits: `abc1234`, `def5678`
 
 ## Estado actual
 
-*Actualizado: 2026-11-21 · rama `clasificador-estados`*
+*Actualizado: 2026-11-24 · rama `clasificador-estados`*
 
 **Firmware (ejemplo *Chain token passing*).** Estado congelado desde el 2026-11-19 y documentado en el capítulo 3 de la memoria.
 
@@ -39,7 +39,7 @@ Rama: `...` · Commits: `abc1234`, `def5678`
 - 25 entradas del modelo calculadas en el coordinador, idénticas a las de Python (diferencia máxima 3·10⁻⁵).
 - Salidas configurables: `READABLE_OUTPUT`, `COMPOSITION_OUTPUT`, `RAW_DATA_OUTPUT`, `FEATURES_OUTPUT` y `AI_DEPLOYMENT`. Este último está desactivado hasta reentrenar el modelo con las 25 entradas.
 
-**Procesado de datos (`extras/AI Integration/`).** Formato en crudo común al simulador y a las placas (27 columnas). Cálculo de las 25 entradas con la misma calibración que el coordinador. `grabador_serie.py` graba las placas.
+**Procesado de datos (`extras/AI Integration/`).** Formato en crudo común al simulador y a las placas (27 columnas). En los dos, las distancias son medidas directas de cada pareja (hijo y nieto); el simulador marca además los ciclos con un nodo sin responder (`node_unresponsive`). Cálculo de las 25 entradas con la misma calibración que el coordinador. `grabador_serie.py` graba las placas.
 
 **Hardware.** ESP32 UWB de MakerFabs (ESP32-WROOM-32 + DW1000), canal 5, modo 1 (110 kbps, PRF 16 MHz, preámbulo 2048).
 
@@ -59,6 +59,35 @@ Rama: `...` · Commits: `abc1234`, `def5678`
 ## Registro
 
 *Lo más reciente primero.*
+
+### 2026-11-24 · Adaptador del simulador: medidas directas al hijo y al nieto, y nodos sin responder
+Rama: `clasificador-estados` · Simulador: `Simulador-CARLA`, rama `uwb-pairs`
+
+**Qué.**
+- **`adaptador_simulador.py`** lee el formato nuevo del simulador:
+  - `coord/rx_crd.csv`, con `uwb_son` y `uwb_grandson` de cada vagón;
+  - `coord/uwb_crd.csv`, con las medidas de la locomotora a w1 y w2. Se toma la fila más cercana por `frame` al mensaje de w1, o a su ranura; a más de media ranura no se usa.
+- Cada pareja es una **medida directa**: ya no se resta nada. Una pareja cuenta como vista si llegó el mensaje y la medida no está vacía.
+- **Un solo nombre por vehículo** (`crd`, `w1`…`w4`): `w1` es `w1`, sin traducir ids.
+- **Solo se acepta el formato nuevo.** Un ensayo antiguo se rechaza con un aviso claro, también desde el exportador, que lo salta.
+- **Nodos sin responder.** El adaptador lee los episodios `node_unresponsive` de `config.json` y marca cada ciclo según el instante de la ranura del vagón. El exportador añade la columna `unresponsive_nodes` al archivo de revisión, sin cambiar las etiquetas: con el tren íntegro, esos ciclos son OK. La composición guarda los episodios, los ciclos marcados y cuántos de ellos tienen mensaje del vagón, que debe ser 0.
+- **Documentación:**
+  - readme de AI Integration, `datasets_simulador/readme.md`, `guia_exportacion.md` y cabecera de `formato_crudo.py`;
+  - se borra `guia_simulador.md`, que ahora vive en el repositorio del simulador;
+  - se arregla la referencia rota a `registro_cambios.md`.
+
+**Por qué.**
+- **Distancias.** La resta d(wk) − d(wk−1) tenía dos problemas. Duplicaba el ruido. Y en curva acortaba la distancia, porque solo coincide con la distancia real en recta. Además, el nieto no era una medida independiente, así que el simulador no podía enseñar la redundancia. Ahora el simulador mide igual que las placas.
+- **Nodos sin responder.** Los episodios `node_unresponsive` etiquetados como OK son los ejemplos de enlaces perdidos con el tren íntegro que el modelo necesita para aprender la redundancia del nieto. La columna de revisión permite buscar falsas alarmas en esos ciclos.
+
+**Verificación.** Se probó con un ensayo sintético en el formato nuevo: tren recto, w2 sin responder entre 20 y 30 s y un ciclo sin el mensaje de w1. La prueba pasa la cadena completa, del adaptador al exportador.
+- **Con w2 sin responder,** se ven `c_w1`, `w1_w3` y `w3_w4`, y no se ven `w1_w2`, `w2_w3`, `c_w2` ni `w2_w4`. `hop2_w1_w3` mantiene su desviación ≈ 0.
+- **Sin el mensaje de w1,** el coordinador usa la fila de su ranura.
+- **Ciclos marcados:** se marcan 10 y ninguno tiene mensaje de w2.
+- **Formato antiguo:** se rechaza con el aviso.
+- **Pendiente:** verificar con los ensayos reales del laboratorio (nominal, desacople y `node_unresponsive`).
+
+**Memoria.** Capítulo 5 (adaptación al formato común). Los ensayos del capítulo 5 hay que repetirlos con el simulador actual.
 
 ### 2026-11-21 · Memoria: proyecto de Overleaf y capítulo 3
 Sin cambios en el código.
@@ -202,9 +231,13 @@ Estimaciones a partir del código, sin medir:
 ### Coordinador y modelo
 - `MAX_LINK_REFS` → `2*MAX_DEVICES+4`: con 12 no basta a partir de 8 dispositivos.
 - **Aviso de predicción provisional.** Contar solo las parejas en calibración (0 < `num_samples` < 30) e ignorar las que nunca se han visto.
-- **`encodeDistance()` trunca en vez de redondear.** Sesgo medio de unos −0,5 cm. Comprobar qué hacen el simulador y Python.
+- **`encodeDistance()` trunca en vez de redondear.** Sesgo medio de unos −0,5 cm. El simulador da las distancias sin cuantizar a cm.
 - **Despliegue del modelo.** Desplegarlo cuando esté reentrenado (`AI_DEPLOYMENT`) y **medir el tiempo de inferencia en las placas** (encargo del tutor).
 - **Grabación con el firmware nuevo.** Probar en las placas la grabación con `grabador_serie.py`.
+
+### Procesado de datos
+- Verificar el adaptador nuevo con los ensayos reales del laboratorio: nominal, desacople y `node_unresponsive`.
+- Repetir los ensayos del simulador (desacople, prefallo, frenado) con el formato nuevo y actualizar la tabla de etiquetado del readme.
 
 ### Hardware y librería
 - IMU en `readImu()` cuando llegue el hardware.

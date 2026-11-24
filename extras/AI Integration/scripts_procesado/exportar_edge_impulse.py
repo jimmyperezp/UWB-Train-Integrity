@@ -26,6 +26,7 @@ Para cada ensayo elegido:
          marca cuyo from_cycle sea menor o igual que su ciclo (cualquier número de fases).
   4. Escribe, en datasets_procesados/<origen>/<ensayo>/:
        revision/revision_<ensayo>.csv        todos los ciclos con las 25 columnas, su uso y su etiqueta
+                                             (simulador: también los vagones sin responder, unresponsive_nodes)
        edge_impulse/<ETIQUETA>.<ensayo>.csv  un archivo por etiqueta, listo para subir a Edge Impulse
        resumen_<ensayo>.json                 añade la parte "procesado" (recuentos, calibración, avisos)
                                              sin tocar "fecha", "descripcion" ni "grabacion"
@@ -81,6 +82,7 @@ NOMBRE_VALIDO = re.compile(r'^[A-Za-z0-9_-]+$')
 # Columnas de uso y etiqueta del archivo de revisión, y valores del uso
 COL_USO = 'use'
 COL_ETIQUETA = 'label'
+COL_SIN_RESPONDER = 'unresponsive_nodes'    # solo simulador: vagones en node_unresponsive ('w2', 'w1 w3'...); no cambia la etiqueta
 USO_ENTRENAMIENTO = 'training'
 USO_SIN_ETIQUETA = 'unlabeled'
 USO_DESCARTADO_ARRANQUE = 'discarded_startup'
@@ -120,16 +122,20 @@ def elegir_ensayos(registro, nombre_registro):
 # --- Paso 1: CSV en crudo ------------------------------------------------------
 
 def obtener_crudo(ens, origen, dir_ensayo):
+    """Devuelve (crudo, sin_responder). sin_responder solo existe en el simulador (en las placas, None)."""
     if origen == 'SIMULADOR':
         carpeta = CARPETA_DATASETS_SIMULADOR / ens['carpeta_simulador']
         if not carpeta.exists():
             raise AvisoEnsayo(f'no existe su carpeta del simulador ({carpeta})')
-        return adaptador_simulador.procesar(carpeta, ens['nombre'], dir_ensayo / 'crudo')
+        try:
+            return adaptador_simulador.procesar(carpeta, ens['nombre'], dir_ensayo / 'crudo')
+        except adaptador_simulador.FormatoSimuladorError as e:
+            raise AvisoEnsayo(str(e))
     ruta_crudo = ORIGENES['PLACAS']['carpeta'] / ens['crudo']
     if not ruta_crudo.exists():
         raise AvisoEnsayo(f'no existe su CSV en crudo ({ruta_crudo}). Si borraste la grabación, '
                           'borra también su entrada en ensayos_placas.json')
-    return pd.read_csv(ruta_crudo)
+    return pd.read_csv(ruta_crudo), None
 
 
 # --- Paso 3: uso y etiqueta de cada ciclo ------------------------------------------
@@ -170,7 +176,7 @@ def exportar_ensayo(ens, g, origen):
         raise AvisoEnsayo('el nombre solo puede tener letras sin tildes, números, "_" y "-" (sin espacios)')
     dir_ensayo = ORIGENES[origen]['carpeta'] / nombre
 
-    crudo = obtener_crudo(ens, origen, dir_ensayo)
+    crudo, sin_responder = obtener_crudo(ens, origen, dir_ensayo)
     parametros = {k: g[k] for k in calculo_columnas.PARAMETROS_POR_DEFECTO if k in g}
     try:
         col, info = calculo_columnas.calcular(crudo, parametros)
@@ -197,6 +203,8 @@ def exportar_ensayo(ens, g, origen):
     revision = col.copy()
     revision.insert(2, COL_USO, uso)
     revision.insert(3, COL_ETIQUETA, etiqueta)
+    if sin_responder is not None:
+        revision.insert(4, COL_SIN_RESPONDER, sin_responder.values)
     revision.to_csv(dir_revision / f'revision_{nombre}.csv', index=False, float_format='%.6f')
 
     # Edge Impulse: un archivo por etiqueta (y por tramo de ciclos consecutivos)
