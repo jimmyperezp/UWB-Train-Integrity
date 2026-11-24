@@ -71,6 +71,7 @@ Rama: `clasificador-estados` · Simulador: `Simulador-CARLA`, rama `uwb-pairs`
 - **Un solo nombre por vehículo** (`crd`, `w1`…`w4`): `w1` es `w1`, sin traducir ids.
 - **Solo se acepta el formato nuevo.** Un ensayo antiguo se rechaza con un aviso claro, también desde el exportador, que lo salta.
 - **Nodos sin responder.** El adaptador lee los episodios `node_unresponsive` de `config.json` y marca cada ciclo según el instante de la ranura del vagón. El exportador añade la columna `unresponsive_nodes` al archivo de revisión, sin cambiar las etiquetas: con el tren íntegro, esos ciclos son OK. La composición guarda los episodios, los ciclos marcados y cuántos de ellos tienen mensaje del vagón, que debe ser 0.
+- **Campo `nodos_sin_responder` en `ensayos_simulador.json`.** Es solo informativo y se rellena a mano; ningún script lo usa, porque mandan los episodios de `config.json`. Está documentado en el readme.
 - **Documentación:**
   - readme de AI Integration, `datasets_simulador/readme.md`, `guia_exportacion.md` y cabecera de `formato_crudo.py`;
   - se borra `guia_simulador.md`, que ahora vive en el repositorio del simulador;

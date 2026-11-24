@@ -174,7 +174,11 @@ Se escribe **a mano**: tiene lo que no se puede deducir de los datos del simulad
       "carpeta_simulador": "decoupling_w2_150s",
       "evento_s": 150.0,
       "etiqueta_tras_evento": "LOST_INTEGRITY",
-      "fin_s": 455.0
+      "fin_s": 455.0,
+      "nodos_sin_responder": [
+        { "vagon": "w1", "inicio_s": 20.0, "fin_s": 24.0 },
+        { "vagon": "w4", "inicio_s": 40.0, "fin_s": 42.0 }
+      ]
     }
   ]
 }
@@ -183,6 +187,11 @@ Se escribe **a mano**: tiene lo que no se puede deducir de los datos del simulad
 - `carpeta_simulador`: nombre de la carpeta del ensayo dentro de `datasets_simulador/`.
 - `evento_s`: segundo del evento (`null` si no hay). Hasta él, OK; después, `etiqueta_tras_evento`.
 - `fin_s`: a partir de ese segundo los ciclos se descartan (`null` para no recortar).
+- `nodos_sin_responder`: **solo informativo**, para saber qué pasa en cada ensayo; ningún script lo lee. Son los
+  episodios de `NODE_UNRESPONSIVE` del simulador: vagón, inicio y fin en segundos (`[]` si no hay ninguno). Los
+  scripts usan los episodios que el simulador guarda en el `config.json` del ensayo (`"test"` → `"node_unresponsive"`),
+  así que, si este campo no coincide, manda `config.json`. Los `inicio_s` y `fin_s` van siempre **dentro** de este
+  campo: un `fin_s` suelto en la entrada es el fin del ensayo y recortaría los ciclos.
 
 ## Formato del CSV en crudo
 
