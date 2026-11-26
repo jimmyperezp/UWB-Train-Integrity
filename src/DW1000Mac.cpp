@@ -20,6 +20,9 @@
  * to generate the mac layer
  * 
  * @todo everything, this class is only a prototype
+ *
+ * Modified by Jaime Pérez (2025-2026) for the UWB-Train-Integrity project:
+ * see the repository history for the changes.
  */
 
 #include "DW1000Mac.h" 

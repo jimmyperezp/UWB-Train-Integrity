@@ -18,6 +18,9 @@
  * @file DW1000Time.cpp
  * Arduino driver library timestamp wrapper (source file) for the Decawave 
  * DW1000 UWB transceiver IC.
+ *
+ * Modified by Jaime Pérez (2025-2026) for the UWB-Train-Integrity project:
+ * see the repository history for the changes.
  */
 
 #include "DW1000Time.h"

@@ -25,6 +25,9 @@
  * @note
  * comments in cpp file, makes .h smaller and gives a better overview about
  * available methods and variables.
+ *
+ * Modified by Jaime Pérez (2025-2026) for the UWB-Train-Integrity project:
+ * see the repository history for the changes.
  */
 
 #ifndef DW1000TIME_H

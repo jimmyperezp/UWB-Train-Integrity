@@ -24,6 +24,9 @@
  * - TR in TX_FCTRL for flagging for ranging messages
  * - CANSFCS in SYS_CTRL to cancel frame check suppression
  * - HSRBP in SYS_CTRL to determine in double buffered mode from which buffer to read
+ *
+ * Modified by Jaime Pérez (2025-2026) for the UWB-Train-Integrity project:
+ * see the repository history for the changes.
  */
 
 #ifndef _DW1000_H_INCLUDED

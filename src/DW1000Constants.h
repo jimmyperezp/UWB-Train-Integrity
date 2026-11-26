@@ -16,6 +16,9 @@
  *
  * @file DW1000Constants.h
  * Arduino driver library (header file) for the Decawave DW1000 UWB transceiver IC.
+ *
+ * Modified by Jaime Pérez (2025-2026) for the UWB-Train-Integrity project:
+ * see the repository history for the changes.
  */
 
 #ifndef _DW1000CONSTANTS_H_INCLUDED

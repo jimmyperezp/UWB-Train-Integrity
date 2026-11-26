@@ -60,6 +60,20 @@ Rama: `...` · Commits: `abc1234`, `def5678`
 
 *Lo más reciente primero.*
 
+### 2026-11-26 · Cabeceras de licencia restauradas en la librería
+Rama: `clasificador-estados`
+
+**Qué.**
+- `DW1000.cpp`, `DW1000Device.h/.cpp` y `DW1000Ranging.h/.cpp` recuperan la cabecera original: copyright de Thomas Trojer y Leopold Sayous y texto de la Apache License 2.0. Se ha copiado de la versión de Pizzo00 en `jremington/UWB-Indoor-Localization_Arduino`.
+- Los 12 ficheros `DW1000*` modificados respecto a esa versión llevan ahora la nota *Modified by Jaime Pérez (2025-2026)*. Son los 5 anteriores más `DW1000.h`, `DW1000Constants.h`, `DW1000CompileOptions.h`, `DW1000Mac.h/.cpp` y `DW1000Time.h/.cpp`.
+- `deprecated.h` y `require_cpp11.h` no han cambiado respecto al original y conservan su cabecera.
+
+**Por qué.** La Apache 2.0 (apartado 4) obliga a conservar los avisos de copyright y de licencia de los ficheros de origen, y a marcar los ficheros modificados. Cuatro de los cinco ficheros ya llegaron sin cabecera al primer commit, así que había que recuperarla del original.
+
+**Verificación.** Solo se han añadido comentarios, dentro del primer bloque de cada fichero. Se ha comprobado con un diff contra los ficheros de Pizzo00 qué ficheros estaban modificados.
+
+**Memoria.** No aplica. La licencia del repositorio está en los pendientes.
+
 ### 2026-11-24 · Adaptador del simulador: medidas directas al hijo y al nieto, y nodos sin responder
 Rama: `clasificador-estados` · Simulador: `Simulador-CARLA`, rama `uwb-pairs`
 
@@ -246,5 +260,6 @@ Estimaciones a partir del código, sin medir:
 - **Release v2.0.0:**
   - `library.properties`: nombre, URL del repositorio equivocada, `depends=ArduinoJson`.
   - Renombrar `example/` → `examples/`.
-  - Añadir `LICENSE` (comprobar Apache 2.0 de la librería original).
+  - Añadir `LICENSE` y decidir la licencia del repositorio. La librería original de thotro (y la de MakerFabs) es Apache 2.0, y la carpeta de Pizzo00 dice Apache 2.0 en su README. Pero el `LICENSE` de la raíz de `jremington/UWB-Indoor-Localization_Arduino` es **GPL-3.0**. Hay que aclarar con el tutor qué licencia aplica a las modificaciones de jremington y de Pizzo00 y, con ello, la del TFM.
+  - Crear un apartado de créditos (o un `NOTICE`) con la cadena de procedencia: thotro → MakerFabs → jremington/Pizzo00 → este repositorio.
   - Actualizar `releases.md`.

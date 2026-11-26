@@ -17,6 +17,9 @@
  * @file DW1000CompileOptions.h
  * Here are some options to optimize code and save some ram and rom
  * 
+ *
+ * Modified by Jaime Pérez (2025-2026) for the UWB-Train-Integrity project:
+ * see the repository history for the changes.
  */
 
 #ifndef DW1000COMPILEOPTIONS_H
